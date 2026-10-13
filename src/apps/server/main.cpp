@@ -18,9 +18,14 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    app.setApplicationName("Carbon Engine Service");
+    app.setApplicationName("Carbon Engine");
+    app.setOrganizationName("Carbon Services");
+#ifdef CARBON_ENGINE_VERSION
+    app.setApplicationVersion(CARBON_ENGINE_VERSION);
+#else
     app.setApplicationVersion("1.0.0");
-    Logger log("Server-Main");
+#endif
+    Logger log("Carbon Engine");
 
     Database db(kDatabaseFilePath);
     if (!db.init())

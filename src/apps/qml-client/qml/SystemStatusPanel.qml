@@ -5,7 +5,7 @@ import CarbonEngineClient
 
 Rectangle {
     Layout.fillWidth: true
-    Layout.preferredHeight: 310
+    Layout.preferredHeight: 335
     color: Theme.bgSidebar
     radius: 4
     border.color: Theme.borderCol
@@ -26,6 +26,8 @@ Rectangle {
             color: valueColor
             font.pixelSize: 11
             font.family: "Consolas, monospace"
+            elide: Text.ElideRight
+            Layout.maximumWidth: 195
         }
     }
 
@@ -74,6 +76,7 @@ Rectangle {
             StatusRow { label: "Job queue"; value: poller ? poller.jobQueue : "—" }
             StatusRow { label: "CPU"; value: poller ? poller.cpuLoad : "—" }
             StatusRow { label: "Memory"; value: poller ? poller.memoryUsage : "—" }
+            StatusRow { label: "GPU Load"; value: poller ? poller.gpuLoad : "—" }
             StatusRow { label: "GPU VRAM"; value: poller ? poller.vramUsage : "—" }
             StatusRow { label: "Offload"; value: poller ? poller.gpuOffload : "—" }
             StatusRow {

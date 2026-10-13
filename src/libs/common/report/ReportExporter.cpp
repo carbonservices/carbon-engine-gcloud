@@ -3,6 +3,7 @@
 // Qt
 #include <QCoreApplication>
 #include <QFile>
+#include <QStandardPaths>
 
 // Templating
 #include <inja/inja.hpp>
@@ -79,21 +80,90 @@ void enrichArrayNumbers(nlohmann::json& arr, const std::string& currKey = "curre
     }
 }
 
+void copyAliasIfMissing(nlohmann::json& item, const std::string& targetKey, const std::string& sourceKey)
+{
+    if (item.contains(sourceKey) && !item.contains(targetKey)) {
+        item[targetKey] = item[sourceKey];
+    } else if (item.contains(targetKey) && !item.contains(sourceKey)) {
+        item[sourceKey] = item[targetKey];
+    }
+}
+
+void normalizeTableAliases(nlohmann::json& reportData)
+{
+    auto applyAliases = [](nlohmann::json& arr, const std::vector<std::pair<std::string, std::string>>& pairs) {
+        if (!arr.is_array()) return;
+        for (auto& item : arr) {
+            if (!item.is_object()) continue;
+            for (const auto& [a, b] : pairs) {
+                copyAliasIfMissing(item, a, b);
+            }
+        }
+    };
+
+    applyAliases(reportData["subsidiaries"], {
+        {"name", "company_name"},
+        {"type", "business_activity"},
+        {"shares_held_pct", "holding_pct"}
+    });
+
+    applyAliases(reportData["csr_projects"], {
+        {"location", "state_district"}
+    });
+
+    applyAliases(reportData["turnover_rates"], {
+        {"total_current", "current_rate"},
+        {"total_prev", "prev_rate"}
+    });
+
+    applyAliases(reportData["business_activities"], {
+        {"main_activity", "description"},
+        {"business_activity", "description"},
+        {"turnover_percentage", "turnover_pct"}
+    });
+
+    applyAliases(reportData["products_sold"], {
+        {"name", "product_name"},
+        {"turnover_percentage", "turnover_pct"}
+    });
+
+    applyAliases(reportData["p1_fines"], {
+        {"authority", "agency"},
+        {"brief_case", "brief"}
+    });
+
+    applyAliases(reportData["p2_lca"], {
+        {"product", "product_name"}
+    });
+
+    applyAliases(reportData["p3_parental_leave_retention"], {
+        {"return_to_work_rate", "return_rate"},
+        {"gender", "category"}
+    });
+
+    applyAliases(reportData["p7_trade_associations"], {
+        {"name", "association_name"}
+    });
+
+    applyAliases(reportData["p9_product_recalls"], {
+        {"recall_count", "number_recalled"}
+    });
+
+    applyAliases(reportData["p6_scope123_emissions"], {
+        {"scope_name", "scope"}
+    });
+}
+
 void precomputeChartMetrics(nlohmann::json& reportData)
 {
+    normalizeTableAliases(reportData);
+
     enrichArrayNumbers(reportData["p6_energy"]);
     enrichArrayNumbers(reportData["p6_water_withdrawal"]);
     enrichArrayNumbers(reportData["p6_water_discharge"]);
     enrichArrayNumbers(reportData["p6_waste"]);
     enrichArrayNumbers(reportData["p9_complaints"], "received_current", "received_prev");
     enrichArrayNumbers(reportData["p6_scope123_emissions"]);
-    if (reportData["p6_scope123_emissions"].is_array()) {
-        for (auto& item : reportData["p6_scope123_emissions"]) {
-            if (item.is_object() && !item.contains("scope_name") && item.contains("scope")) {
-                item["scope_name"] = item["scope"];
-            }
-        }
-    }
 
     nlohmann::json ghgFiltered = nlohmann::json::array();
     if (reportData.contains("p6_ghg_emissions") && reportData["p6_ghg_emissions"].is_array()) {
@@ -161,9 +231,15 @@ QString ReportExporter::exportJob(int jobId, bool allowDraft)
         return "<h1>Error: report has not been accepted yet</h1>";
     }
 
-    QString tmplPath = QCoreApplication::applicationDirPath() + "/template.html";
+    QString tmplPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + "/CarbonESG/templates/template.html";
+    if (!QFile::exists(tmplPath)) {
+        tmplPath = QCoreApplication::applicationDirPath() + "/template.html";
+    }
     if (!QFile::exists(tmplPath)) {
         tmplPath = QCoreApplication::applicationDirPath() + "/templates/template.html";
+    }
+    if (!QFile::exists(tmplPath)) {
+        tmplPath = QCoreApplication::applicationDirPath() + "/../share/carbon-esg/templates/template.html";
     }
     if (!QFile::exists(tmplPath)) {
         tmplPath = "src/libs/common/templates/template.html";

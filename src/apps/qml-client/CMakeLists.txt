@@ -14,6 +14,13 @@ target_link_libraries(carbon-engine-client PRIVATE
     carbon-engine-common
 )
 
+if(UNIX AND NOT APPLE)
+    set_target_properties(carbon-engine-client PROPERTIES
+        INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"
+        BUILD_WITH_INSTALL_RPATH TRUE
+    )
+endif()
+
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 add_custom_command(TARGET carbon-engine-client POST_BUILD
@@ -42,7 +49,7 @@ set(QML_FILES
     qml/LoopFieldEditor.qml
     qml/SettingsDialog.qml
     qml/RateLimitDialog.qml
-    qml/BrsrMetadata.js
+    qml/BRSRMetadata.js
 )
 foreach(qml_file IN LISTS QML_FILES)
     get_filename_component(filename ${qml_file} NAME)

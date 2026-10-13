@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import CarbonEngineClient
-import "BrsrMetadata.js" as BrsrMeta
+import "BRSRMetadata.js" as BrsrMeta
 
 Dialog {
     id: reviewDialog

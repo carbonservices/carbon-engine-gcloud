@@ -178,14 +178,17 @@ void ReportExtractionService::generateAndPersistGroup(int jobId, const FieldGrou
         }
 
         QString instructions = buildInstructions(jobId, group);
+        _monitor.setEnginePhase(EnginePhase::Inferencing);
         auto cloudResult = _gemini.generateExtraction(instructions, ctx.assembledContext);
 
         if (_cancelRequested.load()) {
+            _monitor.setEnginePhase(EnginePhase::Idle);
             return;
         }
 
         while (!cloudResult.success) {
             if (_cancelRequested.load()) {
+                _monitor.setEnginePhase(EnginePhase::Idle);
                 return;
             }
 
@@ -220,6 +223,7 @@ void ReportExtractionService::generateAndPersistGroup(int jobId, const FieldGrou
             _isRateLimited.store(false);
 
             if (_cancelRequested.load() || _rateLimitResolution == RateLimitResolution::Cancel) {
+                _monitor.setEnginePhase(EnginePhase::Idle);
                 _db.setExtractionStatus(jobId, ExtractionStatus::Failed);
                 return;
             }
@@ -257,6 +261,11 @@ void ReportExtractionService::generateAndPersistGroup(int jobId, const FieldGrou
             outTokensGenerated = cloudResult.candidateTokens;
             tokenCount = cloudResult.candidateTokens;
 
+            if (cloudResult.latencyMs > 0 && cloudResult.candidateTokens > 0) {
+                double tps = static_cast<double>(cloudResult.candidateTokens) / (static_cast<double>(cloudResult.latencyMs) / 1000.0);
+                _monitor.setTokensPerSec(tps);
+            }
+
             {
                 QMutexLocker locker(&_progressMutex);
                 _progress.lastLatencyMs = cloudResult.latencyMs;
@@ -264,6 +273,7 @@ void ReportExtractionService::generateAndPersistGroup(int jobId, const FieldGrou
             _log.info(QString("[Cloud] Section '%1' extracted via %2 in %3ms (%4 tokens)")
                 .arg(group.id).arg(GCloudConfig::instance().modelName()).arg(cloudResult.latencyMs).arg(cloudResult.candidateTokens));
         }
+        _monitor.setEnginePhase(EnginePhase::Idle);
     }
 
     if (!isCloud) {

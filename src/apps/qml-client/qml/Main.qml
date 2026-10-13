@@ -4,7 +4,7 @@ import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import CarbonEngineClient
-import "BrsrMetadata.js" as BrsrMeta
+import "BRSRMetadata.js" as BrsrMeta
 
 ApplicationWindow {
     id: appWindow
@@ -13,7 +13,7 @@ ApplicationWindow {
     minimumWidth: 1080
     minimumHeight: 680
     visible: true
-    title: "Carbon Engine - BRSR ESG Analytics"
+    title: "Carbon ESG"
     flags: Qt.Window | Qt.FramelessWindowHint
 
     function safeMove() {
@@ -77,7 +77,7 @@ ApplicationWindow {
         border.width: appWindow.visibility === Window.Maximized ? 0 : 1
     }
 
-    ListModel { id: statusLogModel; ListElement { entry: "Carbon Engine initialized. Checking daemon connection..." } }
+    ListModel { id: statusLogModel; ListElement { entry: "Carbon ESG initialized. Connecting to Carbon Engine..." } }
     ListModel { id: documentQueueModel }
     ListModel { id: activeDocumentsModel }
     ListModel { id: reportsHistoryModel }
@@ -614,7 +614,7 @@ ApplicationWindow {
                 }
 
                 Label {
-                    text: "Carbon Engine"
+                    text: "Carbon ESG"
                     font.pixelSize: 12
                     font.bold: true
                     color: Theme.textBright

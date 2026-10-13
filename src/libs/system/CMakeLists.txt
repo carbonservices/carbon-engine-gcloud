@@ -16,6 +16,6 @@ target_link_libraries(carbon-engine-system PUBLIC
 )
 
 if(WIN32)
-    target_link_libraries(carbon-engine-system PRIVATE dxgi)
+    target_link_libraries(carbon-engine-system PRIVATE dxgi pdh)
 endif()
 

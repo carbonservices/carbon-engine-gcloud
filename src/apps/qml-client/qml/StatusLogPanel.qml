@@ -46,5 +46,21 @@ Rectangle {
                 color: Theme.textMuted
             }
         }
+
+        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.borderSubtle; opacity: 0.5 }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 4
+
+            Item { Layout.fillWidth: true }
+
+            Label {
+                text: "Carbon ESG v" + Qt.application.version + " (Qt " + Qt.version + ")"
+                font.pixelSize: 9
+                color: Theme.textMuted
+                opacity: 0.65
+            }
+        }
     }
 }

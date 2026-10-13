@@ -1,5 +1,38 @@
 cmake_minimum_required(VERSION 3.24)
-project(carbon-engine LANGUAGES C CXX)
+
+if(NOT DEFINED CARBON_ENGINE_VERSION OR CARBON_ENGINE_VERSION STREQUAL "")
+    if(DEFINED ENV{CARBON_ENGINE_VERSION} AND NOT "$ENV{CARBON_ENGINE_VERSION}" STREQUAL "")
+        set(CARBON_ENGINE_VERSION "$ENV{CARBON_ENGINE_VERSION}")
+    elseif(DEFINED ENV{GITHUB_REF_NAME} AND "$ENV{GITHUB_REF_NAME}" MATCHES "^v?[0-9]")
+        string(REGEX REPLACE "^v" "" CARBON_ENGINE_VERSION "$ENV{GITHUB_REF_NAME}")
+    else()
+        find_package(Git QUIET)
+        if(Git_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+            execute_process(
+                COMMAND "${GIT_EXECUTABLE}" describe --tags --always
+                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                OUTPUT_VARIABLE GIT_TAG_VER
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+            )
+            if(GIT_TAG_VER MATCHES "^v?([0-9]+\\.[0-9]+(\\.[0-9]+)?)")
+                set(CARBON_ENGINE_VERSION "${CMAKE_MATCH_1}")
+            endif()
+        endif()
+    endif()
+endif()
+
+if(NOT DEFINED CARBON_ENGINE_VERSION OR CARBON_ENGINE_VERSION STREQUAL "")
+    set(CARBON_ENGINE_VERSION "1.0.0")
+endif()
+
+string(REGEX REPLACE "^v" "" CARBON_ENGINE_VERSION "${CARBON_ENGINE_VERSION}")
+if(CARBON_ENGINE_VERSION MATCHES "^([0-9]+)\\.([0-9]+)$")
+    set(CARBON_ENGINE_VERSION "${CARBON_ENGINE_VERSION}.0")
+endif()
+
+project(carbon-engine VERSION ${CARBON_ENGINE_VERSION} LANGUAGES C CXX)
+add_compile_definitions(CARBON_ENGINE_VERSION="${CARBON_ENGINE_VERSION}")
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
     set(ARCH_DIR "x64")
@@ -23,7 +56,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-find_package(Qt6 6.10 REQUIRED COMPONENTS Core WebEngineQuick WebChannel Positioning HttpServer Sql Concurrent Quick QuickControls2 Network)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core WebEngineQuick WebChannel Positioning HttpServer Sql Concurrent Quick QuickControls2 Network)
 qt_standard_project_setup()
 
 set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/third-party" CACHE PATH "" FORCE)
@@ -68,14 +101,15 @@ endif()
 
 FetchContent_MakeAvailable(llama)
 
-FetchContent_Declare(mkl_static URL https://www.nuget.org/api/v2/package/intelmkl.static.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_static.zip)
-FetchContent_Declare(mkl_devel URL https://www.nuget.org/api/v2/package/intelmkl.devel.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_devel.zip)
-FetchContent_MakeAvailable(mkl_static mkl_devel)
+if(WIN32)
+    FetchContent_Declare(mkl_static URL https://www.nuget.org/api/v2/package/intelmkl.static.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_static.zip)
+    FetchContent_Declare(mkl_devel URL https://www.nuget.org/api/v2/package/intelmkl.devel.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_devel.zip)
+    FetchContent_MakeAvailable(mkl_static mkl_devel)
 
-set(MKL_INCLUDE_DIR "${mkl_devel_SOURCE_DIR}/build/native/include" CACHE PATH "" FORCE)
-set(MKL_LIB_DIR "${mkl_static_SOURCE_DIR}/build/native/win-x64" CACHE PATH "" FORCE)
+    set(MKL_INCLUDE_DIR "${mkl_devel_SOURCE_DIR}/build/native/include" CACHE PATH "" FORCE)
+    set(MKL_LIB_DIR "${mkl_static_SOURCE_DIR}/build/native/win-x64" CACHE PATH "" FORCE)
 
-file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindMKL.cmake" "
+    file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindMKL.cmake" "
 set(MKL_FOUND TRUE)
 find_path(MKL_INCLUDE_DIRS NAMES mkl.h PATHS \"${MKL_INCLUDE_DIR}\" NO_DEFAULT_PATH)
 find_library(MKL_INTEL_LP64 NAMES mkl_intel_lp64 PATHS \"${MKL_LIB_DIR}\" NO_DEFAULT_PATH)
@@ -92,6 +126,10 @@ if(NOT TARGET MKL::MKL)
     set_target_properties(MKL::MKL PROPERTIES INTERFACE_INCLUDE_DIRECTORIES \"\${MKL_INCLUDE_DIRS}\" INTERFACE_LINK_LIBRARIES \"\${MKL_LIBRARIES}\")
 endif()
 ")
+else()
+    find_package(BLAS REQUIRED)
+    find_package(LAPACK REQUIRED)
+endif()
 
 FetchContent_Declare(faiss GIT_REPOSITORY https://github.com/facebookresearch/faiss.git GIT_TAG v1.9.0)
 set(FAISS_ENABLE_PYTHON OFF CACHE BOOL "" FORCE)
@@ -100,10 +138,17 @@ set(FAISS_ENABLE_C_API OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(faiss)
 
-FetchContent_Declare(pdfium URL https://github.com/bblanchon/pdfium-binaries/releases/latest/download/pdfium-win-x64.tgz)
-FetchContent_MakeAvailable(pdfium)
-set(PDFIUM_INCLUDE_DIRS ${pdfium_SOURCE_DIR}/include)
-set(PDFIUM_LIBRARIES ${pdfium_SOURCE_DIR}/lib/pdfium.dll.lib)
+if(WIN32)
+    FetchContent_Declare(pdfium URL https://github.com/bblanchon/pdfium-binaries/releases/latest/download/pdfium-win-x64.tgz)
+    FetchContent_MakeAvailable(pdfium)
+    set(PDFIUM_INCLUDE_DIRS ${pdfium_SOURCE_DIR}/include)
+    set(PDFIUM_LIBRARIES ${pdfium_SOURCE_DIR}/lib/pdfium.dll.lib)
+else()
+    FetchContent_Declare(pdfium URL https://github.com/bblanchon/pdfium-binaries/releases/latest/download/pdfium-linux-x64.tgz)
+    FetchContent_MakeAvailable(pdfium)
+    set(PDFIUM_INCLUDE_DIRS ${pdfium_SOURCE_DIR}/include)
+    set(PDFIUM_LIBRARIES ${pdfium_SOURCE_DIR}/lib/libpdfium.so)
+endif()
 
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
 set(PNG_INSTALL OFF CACHE BOOL "" FORCE)
@@ -212,3 +257,4 @@ if(CARBON_ENGINE_DOWNLOAD_MODELS)
 endif()
 
 add_subdirectory(src)
+include(packaging/CMakePackaging.cmake)

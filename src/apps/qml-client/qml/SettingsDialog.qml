@@ -25,8 +25,13 @@ Popup {
     }
 
     property var modeClient: (typeof appWindow !== "undefined" && appWindow.globalModeClient) ? appWindow.globalModeClient : null
+    property bool isBackendConnected: (typeof appWindow !== "undefined" && appWindow.systemPoller) ? appWindow.systemPoller.isConnected : false
 
     onOpened: {
+        if (settingsDialog.parent) {
+            settingsDialog.x = Math.round((settingsDialog.parent.width - width) / 2)
+            settingsDialog.y = Math.round((settingsDialog.parent.height - height) / 2)
+        }
         if (!modeClient) return
         modeClient.fetchMode()
         cloudToggle.checked = modeClient.cloudEnabled
@@ -76,8 +81,9 @@ Popup {
         anchors.fill: parent
         spacing: 0
 
-        // Title Bar
+        // Title Bar (Draggable)
         Rectangle {
+            id: titleBarRect
             Layout.fillWidth: true
             Layout.preferredHeight: 46
             color: Theme.bgHeader
@@ -98,6 +104,32 @@ Popup {
                 anchors.right: parent.right
                 height: 1
                 color: Theme.borderCol
+            }
+
+            // Drag handler to allow moving the dialog around the application window
+            MouseArea {
+                id: titleBarDragArea
+                anchors.fill: parent
+                anchors.rightMargin: 46
+                cursorShape: Qt.SizeAllCursor
+                property point dragStart: Qt.point(0, 0)
+                property point popupStart: Qt.point(0, 0)
+
+                onPressed: (mouse) => {
+                    dragStart = mapToItem(null, mouse.x, mouse.y)
+                    popupStart = Qt.point(settingsDialog.x, settingsDialog.y)
+                }
+                onPositionChanged: (mouse) => {
+                    if (pressed && settingsDialog.parent) {
+                        var curScene = mapToItem(null, mouse.x, mouse.y)
+                        var nx = popupStart.x + (curScene.x - dragStart.x)
+                        var ny = popupStart.y + (curScene.y - dragStart.y)
+                        var maxX = Math.max(0, settingsDialog.parent.width - settingsDialog.width)
+                        var maxY = Math.max(0, settingsDialog.parent.height - settingsDialog.height)
+                        settingsDialog.x = Math.max(0, Math.min(maxX, nx))
+                        settingsDialog.y = Math.max(0, Math.min(maxY, ny))
+                    }
+                }
             }
 
             RowLayout {
@@ -154,6 +186,50 @@ Popup {
                 y: 18
                 spacing: 16
 
+                // Backend Disconnected Notice Banner
+                Rectangle {
+                    visible: !settingsDialog.isBackendConnected
+                    Layout.fillWidth: true
+                    color: Theme.isDarkMode ? "#2e1e1a" : "#fff1f0"
+                    border.color: Theme.dangerColor
+                    border.width: 1
+                    radius: 6
+                    implicitHeight: discLayout.implicitHeight + 20
+
+                    RowLayout {
+                        id: discLayout
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 10
+
+                        Text {
+                            text: "⚠️"
+                            font.pixelSize: 18
+                            Layout.alignment: Qt.AlignTop
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 3
+
+                            Label {
+                                text: "Backend Daemon Disconnected"
+                                font.pixelSize: 12
+                                font.bold: true
+                                color: Theme.dangerColor
+                            }
+
+                            Label {
+                                text: "The carbon-engine daemon is not currently reachable on localhost:8080. Operating strictly in local offline mode with on-device Gemma 2 2B and BGE Small embedding models."
+                                font.pixelSize: 10
+                                color: Theme.isDarkMode ? "#fca5a5" : "#991b1b"
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+                        }
+                    }
+                }
+
                 // Section 1: Mode Toggle
                 Rectangle {
                     Layout.fillWidth: true
@@ -179,17 +255,23 @@ Popup {
                                 color: Theme.textBright
                             }
                             Label {
-                                text: cloudToggle.checked
-                                    ? "Using Google Cloud Gemini API & Embeddings (Configure models below)"
-                                    : "Using Local On-Device Gemma 2 2B Instruct (Air-gapped offline)"
+                                text: {
+                                    if (!settingsDialog.isBackendConnected) {
+                                        return "Backend offline • Using Local On-Device Gemma 2 2B & BGE Small Embeddings"
+                                    }
+                                    return cloudToggle.checked
+                                        ? "Using Google Cloud Gemini API & Embeddings (Configure models below)"
+                                        : "Using Local On-Device Gemma 2 2B & BGE Small Embeddings (Air-gapped offline)"
+                                }
                                 font.pixelSize: 11
-                                color: Theme.textMuted
+                                color: (!settingsDialog.isBackendConnected) ? Theme.warningColor : Theme.textMuted
                             }
                         }
 
                         Switch {
                             id: cloudToggle
-                            checked: modeClient.cloudEnabled
+                            checked: modeClient.cloudEnabled && settingsDialog.isBackendConnected
+                            enabled: settingsDialog.isBackendConnected
                             padding: 0
 
                             indicator: Rectangle {
@@ -522,7 +604,7 @@ Popup {
                                     Button {
                                         id: testBtn
                                         text: modeClient.isTesting ? "Testing..." : "Test Cloud Connection"
-                                        enabled: !modeClient.isTesting && apiKeyInput.text.trim().length > 0
+                                        enabled: !modeClient.isTesting && apiKeyInput.text.trim().length > 0 && settingsDialog.isBackendConnected
                                         Layout.preferredHeight: 32
                                         Layout.preferredWidth: 160
                                         background: Rectangle {
@@ -629,37 +711,113 @@ Popup {
                     }
                 }
 
-                // Section 4: Offline Mode Details (Visible when Local is selected)
+                // Section 4: Offline Mode Details (Visible when Local is selected or Backend is disconnected)
                 Rectangle {
-                    visible: !cloudToggle.checked
+                    visible: !cloudToggle.checked || !settingsDialog.isBackendConnected
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 74
+                    implicitHeight: offlineLayout.implicitHeight + 24
                     color: Theme.bgSubtle
                     border.color: Theme.borderCol
                     border.width: 1
                     radius: 6
 
-                    RowLayout {
-                        anchors.fill: parent
+                    ColumnLayout {
+                        id: offlineLayout
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
                         anchors.margins: 14
                         spacing: 12
 
-                        ColumnLayout {
+                        Label {
+                            text: "Local On-Device Models (Offline Engine)"
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: Theme.textBright
+                        }
+
+                        Rectangle {
                             Layout.fillWidth: true
-                            spacing: 4
+                            height: 1
+                            color: Theme.borderCol
+                        }
 
-                            Label {
-                                text: "Local Inference Engine: Google Gemma 2 2B Instruct"
-                                font.pixelSize: 12
-                                font.bold: true
-                                color: Theme.textBright
+                        // Local Inference Model
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            Text {
+                                text: "🧠"
+                                font.pixelSize: 16
+                                Layout.alignment: Qt.AlignTop
                             }
 
-                            Label {
-                                text: "Model path: models/gemma-2-2b-it-q4_k_m.gguf\nAll statutory BRSR calculations and embeddings execute strictly offline."
-                                font.pixelSize: 11
-                                color: Theme.textMuted
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                Label {
+                                    text: "Inference Model (LLM): Google Gemma 2 2B Instruct"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    color: Theme.textBright
+                                }
+
+                                Label {
+                                    text: "Model file: models/gemma-2-2b-it-q4_k_m.gguf (Q4_K_M quantized GGUF)\nRuntime: llama.cpp engine with GPU acceleration (CUDA) fallback to AVX2 CPU."
+                                    font.pixelSize: 10
+                                    color: Theme.textMuted
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
                             }
+                        }
+
+                        // Local Embedding Model
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            Text {
+                                text: "🔍"
+                                font.pixelSize: 16
+                                Layout.alignment: Qt.AlignTop
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                Label {
+                                    text: "Embedding Model: BAAI BGE Small EN v1.5"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    color: Theme.textBright
+                                }
+
+                                Label {
+                                    text: "Model file: models/bge-small-en-v1.5-f16.gguf (384 dimensions)\nRuntime: Local embedding processor with FAISS HNSW vector indexing."
+                                    font.pixelSize: 10
+                                    color: Theme.textMuted
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: Theme.borderSubtle
+                        }
+
+                        Label {
+                            text: "🔒 Complete Data Privacy: All statutory BRSR extractions and vector similarity searches execute 100% on-device with zero network traffic."
+                            font.pixelSize: 10
+                            color: Theme.isDarkMode ? "#a3e635" : "#4d7c0f"
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
                         }
                     }
                 }
@@ -697,9 +855,9 @@ Popup {
                 spacing: 10
 
                 Label {
-                    text: modeClient.statusMessage
+                    text: (!settingsDialog.isBackendConnected) ? "Backend disconnected" : modeClient.statusMessage
                     font.pixelSize: 11
-                    color: Theme.successColor
+                    color: (!settingsDialog.isBackendConnected) ? Theme.dangerColor : Theme.successColor
                     Layout.fillWidth: true
                     elide: Text.ElideRight
                 }
@@ -728,6 +886,7 @@ Popup {
                 Button {
                     id: saveBtn
                     text: "Save"
+                    enabled: settingsDialog.isBackendConnected
                     Layout.preferredHeight: 32
                     Layout.preferredWidth: 80
                     background: Rectangle {

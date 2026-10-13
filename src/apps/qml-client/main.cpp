@@ -9,8 +9,14 @@ int main(int argc, char *argv[])
     QtWebEngineQuick::initialize();
 
     QGuiApplication app(argc, argv);
-    app.setApplicationName("Carbon Engine");
-    app.setApplicationDisplayName("Carbon Engine - BRSR ESG Analytics");
+    app.setApplicationName("Carbon ESG");
+    app.setOrganizationName("Carbon Services");
+    app.setApplicationDisplayName("Carbon ESG");
+#ifdef CARBON_ENGINE_VERSION
+    app.setApplicationVersion(CARBON_ENGINE_VERSION);
+#else
+    app.setApplicationVersion("1.0.0");
+#endif
 
     QQuickStyle::setStyle("Basic");
 

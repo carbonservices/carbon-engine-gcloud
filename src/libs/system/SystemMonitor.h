@@ -35,12 +35,13 @@ class SystemMonitor : public QObject
     Q_OBJECT
 public:
     explicit SystemMonitor(QObject* parent = nullptr);
+    ~SystemMonitor() override;
 
     // Called by LlamaEngine / Database at phase transitions.
     void setEnginePhase(EnginePhase phase);
     EnginePhase enginePhase() const;
 
-    // Called by LlamaEngine after each streamCompletion.
+    // Called by LlamaEngine / GeminiClient after completion or during generation.
     void setTokensPerSec(double tps);
 
     // ── Snapshot accessors (safe to call from any thread) ─────
@@ -50,7 +51,9 @@ public:
     quint64 memUsedMbSystem()  const;
     quint64 memTotalMbSystem() const;
     bool    gpuPresent()      const;
+    quint64 vramUsedMb()      const;
     quint64 vramTotalMb()     const;
+    double  gpuPct()          const;
     double  tokensPerSec()    const;
 
     // Human-readable engine phase string for JSON.
@@ -64,6 +67,8 @@ private slots:
 
 private:
     void detectGpu();
+    void initPdh();
+    void sampleGpu();
 
     QTimer              _timer;
     mutable QMutex      _mutex;
@@ -74,6 +79,8 @@ private:
     quint64 _memUsedMbProcess = 0;
     quint64 _memUsedMbSystem  = 0;
     quint64 _memTotalMbSystem = 0;
+    quint64 _vramUsedMb      = 0;
+    double  _gpuPct          = 0.0;
 
     // Set externally
     std::atomic<EnginePhase> _phase{EnginePhase::Idle};
@@ -82,6 +89,11 @@ private:
     // Detected once
     bool    _gpuPresent  = false;
     quint64 _vramTotalMb = 0;
+
+    // Windows GPU and performance counter handles (stored as opaque pointers)
+    void*   _pAdapter3      = nullptr;
+    void*   _pdhQuery       = nullptr;
+    void*   _pdhGpuCounter  = nullptr;
 
     // Windows CPU-time bookkeeping (FILETIME stored as ULONGLONG)
     quint64 _prevSysIdle   = 0;

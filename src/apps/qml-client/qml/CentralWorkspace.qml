@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 import QtWebEngine
 import CarbonEngineClient
-import "BrsrMetadata.js" as BrsrMeta
+import "BRSRMetadata.js" as BrsrMeta
 
 Rectangle {
     Layout.fillWidth: true

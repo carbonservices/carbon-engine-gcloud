@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import CarbonEngineClient
-import "BrsrMetadata.js" as BrsrMeta
+import "BRSRMetadata.js" as BrsrMeta
 
 Rectangle {
     id: root
@@ -186,38 +186,7 @@ Rectangle {
                         anchors.rightMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 2
-                        visible: rowHover.hovered || (model.jobId === root.currentJobId && (root.isExtracting || root.batchConfirmed))
-
-                        // Stop/Cancel button for active in-progress job
-                        Rectangle {
-                            id: cancelJobBtn
-                            width: 22
-                            height: 22
-                            radius: 3
-                            color: cancelJobMouse.containsMouse ? Theme.badgeDangerBg : "transparent"
-                            visible: (model.jobId === root.currentJobId && (root.isExtracting || root.batchConfirmed)) || model.status === "PROCESSING" || model.extractionStatus === "EXTRACTING"
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "⏹"
-                                color: cancelJobMouse.containsMouse ? Theme.dangerColor : Theme.warningColor
-                                font.pixelSize: 10
-                            }
-
-                            ToolTip.visible: cancelJobMouse.containsMouse
-                            ToolTip.delay: 300
-                            ToolTip.text: "Cancel active processing and stop cloud API calls"
-
-                            MouseArea {
-                                id: cancelJobMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.cancelJobRequested(model.jobId)
-                                }
-                            }
-                        }
+                        visible: rowHover.hovered
 
                         // Delete button
                         Rectangle {

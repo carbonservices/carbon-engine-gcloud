@@ -659,6 +659,15 @@ void LlamaEngine::streamCompletion(const std::string& prompt,
 
         ++tokensGenerated;
 
+        // Periodic live token rate update so UI poller captures active throughput
+        if (tokensGenerated % 6 == 0) {
+            auto now = std::chrono::steady_clock::now();
+            double secs = std::chrono::duration<double>(now - tStart).count();
+            if (secs > 0.05) {
+                _monitor.setTokensPerSec(static_cast<double>(tokensGenerated) / secs);
+            }
+        }
+
         // Check if context limit reached
         if (tokens.size() + i + 1 >= genCtxSize) {
             _log.warn("Context size limit reached during generation");

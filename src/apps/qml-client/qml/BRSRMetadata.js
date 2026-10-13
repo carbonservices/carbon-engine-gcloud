@@ -241,6 +241,7 @@ var tableTitles = {
     "turnover_rates": "Employee & Worker Turnover Rates",
     "principle_policy_matrix": "Principle-wise Policy Matrix (NGRBC)",
     "review_by_committee": "Committee Oversight & Reviews of NGRBC Principles",
+    "external_assessment": "Independent Assessment of Working of Principles by External Agency",
     "gap_reasons": "Reasons for Not Formulating Policies",
     "p1_training": "Anti-Corruption & Ethics Training Coverage",
     "p1_fines": "Fines / Penalties on Ethics & Anti-Corruption",
@@ -293,13 +294,14 @@ var tableSchemas = {
     ],
     "subsidiaries": [
         { key: "company_name", label: "Company / Subsidiary Name", flex: 3 },
-        { key: "business_activity", label: "Business Activity", flex: 2 },
-        { key: "holding_pct", label: "% Shares Held", flex: 1 }
+        { key: "business_activity", label: "Type / Business Activity", flex: 2 },
+        { key: "holding_pct", label: "% Shares Held", flex: 1 },
+        { key: "br_participation", label: "Participates in BR (Yes/No)", flex: 1 }
     ],
     "csr_projects": [
         { key: "project_name", label: "CSR Project Name", flex: 3 },
-        { key: "state_district", label: "State & District", flex: 2 },
-        { key: "amount_spent", label: "Amount Spent (₹ Lakhs)", flex: 1 }
+        { key: "location", label: "State & District / Location", flex: 2 },
+        { key: "amount_spent", label: "Amount Spent (₹ Cr/Lakhs)", flex: 1 }
     ],
     "stakeholder_grievances": [
         { key: "stakeholder_group", label: "Stakeholder Group", flex: 2 },
@@ -318,8 +320,12 @@ var tableSchemas = {
     ],
     "turnover_rates": [
         { key: "category", label: "Workforce Category", flex: 2 },
-        { key: "current_rate", label: "Current FY Rate (%)", flex: 1 },
-        { key: "prev_rate", label: "Previous FY Rate (%)", flex: 1 }
+        { key: "male_current", label: "Current Male (%)", flex: 1 },
+        { key: "female_current", label: "Current Female (%)", flex: 1 },
+        { key: "total_current", label: "Current Total (%)", flex: 1 },
+        { key: "male_prev", label: "Prev Male (%)", flex: 1 },
+        { key: "female_prev", label: "Prev Female (%)", flex: 1 },
+        { key: "total_prev", label: "Prev Total (%)", flex: 1 }
     ],
     "principle_policy_matrix": [
         { key: "principle", label: "National Voluntary Principle", flex: 2 },
@@ -330,6 +336,11 @@ var tableSchemas = {
         { key: "committee_name", label: "Board / Executive Committee", flex: 2 },
         { key: "subject", label: "Subject Reviewed", flex: 3 },
         { key: "frequency", label: "Frequency", flex: 1 }
+    ],
+    "external_assessment": [
+        { key: "principle_name", label: "Principle", flex: 2 },
+        { key: "assessed", label: "Independently Assessed (Yes/No)", flex: 1 },
+        { key: "agency", label: "Name of Assessing Agency", flex: 3 }
     ],
     "gap_reasons": [
         { key: "principle", label: "Principle", flex: 1 },

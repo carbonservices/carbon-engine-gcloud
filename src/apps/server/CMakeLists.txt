@@ -29,11 +29,23 @@ target_link_libraries(carbon-engine PRIVATE
     Qt6::Network
 )
 
-add_custom_command(TARGET carbon-engine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${pdfium_SOURCE_DIR}/bin/pdfium.dll"
-        $<TARGET_FILE_DIR:carbon-engine>/pdfium.dll
-)
+if(WIN32)
+    add_custom_command(TARGET carbon-engine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${pdfium_SOURCE_DIR}/bin/pdfium.dll"
+            $<TARGET_FILE_DIR:carbon-engine>/pdfium.dll
+    )
+else()
+    add_custom_command(TARGET carbon-engine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${pdfium_SOURCE_DIR}/lib/libpdfium.so"
+            $<TARGET_FILE_DIR:carbon-engine>/libpdfium.so
+    )
+    set_target_properties(carbon-engine PROPERTIES
+        INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"
+        BUILD_WITH_INSTALL_RPATH TRUE
+    )
+endif()
 
 add_custom_command(TARGET carbon-engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
