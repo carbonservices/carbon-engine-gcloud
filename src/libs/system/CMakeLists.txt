@@ -1,6 +1,9 @@
 add_library(carbon-engine-system STATIC
     SystemMonitor.h
     SystemMonitor.cpp
+    SingleInstanceGuard.h
+    WindowsService.h
+    WindowsService.cpp
 )
 
 target_compile_features(carbon-engine-system PUBLIC cxx_std_20)
@@ -16,6 +19,6 @@ target_link_libraries(carbon-engine-system PUBLIC
 )
 
 if(WIN32)
-    target_link_libraries(carbon-engine-system PRIVATE dxgi pdh)
+    target_link_libraries(carbon-engine-system PRIVATE dxgi pdh advapi32)
 endif()
 

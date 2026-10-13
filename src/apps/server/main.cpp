@@ -12,11 +12,23 @@
 #include "report/ReportExporter.h"
 #include "system/SystemMonitor.h"
 #include "vector/VectorIndexRegistry.h"
+#include "system/SingleInstanceGuard.h"
+#include "system/WindowsService.h"
 
 #include <QCoreApplication>
+#include <iostream>
 
-int main(int argc, char *argv[])
+int runServerDaemon(int argc, char *argv[])
 {
+    SingleInstanceGuard guard("CarbonEngine_Daemon_Mutex");
+    if (!guard.isPrimary())
+    {
+        Logger log("Carbon Engine");
+        log.critical("Another instance of Carbon Engine is already running. Exiting.");
+        std::cerr << "Another instance of Carbon Engine is already running. Exiting." << std::endl;
+        return 1;
+    }
+
     QCoreApplication app(argc, argv);
     app.setApplicationName("Carbon Engine");
     app.setOrganizationName("Carbon Services");
@@ -73,4 +85,13 @@ int main(int argc, char *argv[])
 
     log.info(QString("Carbon Engine listening on http://localhost:%1").arg(kDefaultPort));
     return app.exec();
+}
+
+int main(int argc, char *argv[])
+{
+    if (WindowsService::handleServiceCommands(argc, argv, &runServerDaemon))
+    {
+        return 0;
+    }
+    return runServerDaemon(argc, argv);
 }

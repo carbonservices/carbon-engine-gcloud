@@ -15,6 +15,13 @@ install(TARGETS carbon-engine
     BUNDLE DESTINATION .
 )
 
+if(TARGET carbon-tray)
+    install(TARGETS carbon-tray
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        BUNDLE DESTINATION .
+    )
+endif()
+
 # 2. Asset & Shared Library Installation Rules
 if(WIN32)
     # Windows dynamic dependencies & assets
@@ -82,9 +89,21 @@ if(WIN32)
     set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/src/apps/server/app.ico")
     set(CPACK_NSIS_MODIFY_PATH ON)
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_DEFINES "RequestExecutionLevel admin")
+    set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
+        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --install-service'
+        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --start-service'
+        WriteRegStr HKLM \"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\" \"CarbonEngineTray\" '\"$INSTDIR\\\\bin\\\\carbon-tray.exe\"'
+        Exec '\"$INSTDIR\\\\bin\\\\carbon-tray.exe\"'
+    ")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
+        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --stop-service'
+        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --uninstall-service'
+        DeleteRegValue HKLM \"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\" \"CarbonEngineTray\"
+    ")
     set(CPACK_NSIS_MENU_LINKS
         "bin/carbon-engine-client.exe" "Carbon ESG"
-        "bin/carbon-engine.exe" "Carbon Engine Daemon"
+        "bin/carbon-tray.exe" "Carbon Engine Service Manager"
     )
 else()
     set(CPACK_GENERATOR "DEB;TGZ")

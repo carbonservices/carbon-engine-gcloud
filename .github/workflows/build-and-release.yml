@@ -32,24 +32,31 @@ jobs:
       - name: Setup MSVC developer environment
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Setup Ninja
-        uses: ninja-build/setup-ninja@v1
-
-      - name: Setup NASM
-        shell: bash
+      - name: Setup Build Tools (Ninja & NASM)
+        shell: pwsh
         run: |
-          choco install nasm -y --no-progress
-          echo "C:/Program Files/NASM" >> $GITHUB_PATH
+          choco install ninja nasm -y --no-progress
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+      - name: Install Python dependencies
+        shell: pwsh
+        run: pip install aqtinstall
+
+      - name: Cache Qt installation on Windows
+        uses: actions/cache@v5
         with:
-          version: '6.8.2'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_msvc2022_64'
-          modules: 'qtwebengine qtpositioning qtwebchannel qthttpserver'
-          cache: true
+          path: C:\Qt\6.8.2\msvc2022_64
+          key: ${{ runner.os }}-qt-6.8.2-v1
+
+      - name: Install Qt 6.8.2 for MSVC
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "C:\Qt\6.8.2\msvc2022_64\bin\qmake.exe")) {
+            aqt install-qt windows desktop 6.8.2 win64_msvc2022_64 --outputdir "C:\Qt" -m qtwebengine qtpositioning qtwebchannel qthttpserver
+          }
+          echo "QTBIN=C:\Qt\6.8.2\msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "CMAKE_PREFIX_PATH=C:\Qt\6.8.2\msvc2022_64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "C:\Qt\6.8.2\msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Determine Dynamic Version
         id: ver
@@ -70,6 +77,7 @@ jobs:
         run: |
           cmake -B build -G "Ninja" \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="C:/Qt/6.8.2/msvc2022_64" \
             -DCARBON_ENGINE_VERSION="${{ steps.ver.outputs.VERSION }}" \
             -DCARBON_ENGINE_DOWNLOAD_MODELS=OFF
 
@@ -108,26 +116,45 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            python3-pip \
+            python3-venv \
+            wget \
             ninja-build \
+            build-essential \
+            libgl1-mesa-dev \
+            mesa-common-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-0 \
+            libxcb-xinerama0-dev \
             libopenblas-dev \
             liblapack-dev \
-            libgl1-mesa-dev \
-            libxkbcommon-dev \
             libtesseract-dev \
             libleptonica-dev \
             libegl1-mesa-dev \
             libglvnd-dev \
+            libpulse-dev \
+            uuid-dev \
             file
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+      - name: Cache Qt installation on Linux
+        uses: actions/cache@v5
         with:
-          version: '6.8.2'
-          host: 'linux'
-          target: 'desktop'
-          arch: 'gcc_64'
-          modules: 'qtwebengine qtpositioning qtwebchannel qthttpserver'
-          cache: true
+          path: /home/runner/work/Qt/6.8.2/gcc_64
+          key: ${{ runner.os }}-qt-6.8.2-v1
+
+      - name: Install aqtinstall
+        run: pip install aqtinstall --break-system-packages
+
+      - name: Install Qt 6.8.2 on Linux
+        run: |
+          if [ ! -f "/home/runner/work/Qt/6.8.2/gcc_64/bin/qmake" ]; then
+            aqt install-qt linux desktop 6.8.2 linux_gcc_64 --outputdir /home/runner/work/Qt -m qtwebengine qtpositioning qtwebchannel qthttpserver
+          fi
+          echo "QTBIN=/home/runner/work/Qt/6.8.2/gcc_64/bin" >> $GITHUB_ENV
+          echo "QT_PLUGIN_PATH=/home/runner/work/Qt/6.8.2/gcc_64/plugins" >> $GITHUB_ENV
+          echo "QML2_IMPORT_PATH=/home/runner/work/Qt/6.8.2/gcc_64/qml" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=/home/runner/work/Qt/6.8.2/gcc_64" >> $GITHUB_ENV
+          echo "/home/runner/work/Qt/6.8.2/gcc_64/bin" >> $GITHUB_PATH
 
       - name: Determine Dynamic Version
         id: ver
@@ -147,6 +174,7 @@ jobs:
         run: |
           cmake -B build -G "Ninja" \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="/home/runner/work/Qt/6.8.2/gcc_64" \
             -DCARBON_ENGINE_VERSION="${{ steps.ver.outputs.VERSION }}" \
             -DCARBON_ENGINE_DOWNLOAD_MODELS=OFF
 
@@ -201,4 +229,3 @@ jobs:
             release-artifacts/windows/*.zip
             release-artifacts/linux/*.deb
             release-artifacts/linux/*.tar.gz
-

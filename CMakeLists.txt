@@ -56,7 +56,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core WebEngineQuick WebChannel Positioning HttpServer Sql Concurrent Quick QuickControls2 Network)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core WebEngineQuick WebChannel Positioning HttpServer Sql Concurrent Quick QuickControls2 Network Widgets)
 qt_standard_project_setup()
 
 set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/third-party" CACHE PATH "" FORCE)

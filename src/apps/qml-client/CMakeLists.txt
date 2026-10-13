@@ -14,7 +14,11 @@ target_link_libraries(carbon-engine-client PRIVATE
     carbon-engine-common
 )
 
-if(UNIX AND NOT APPLE)
+if(WIN32)
+    set_target_properties(carbon-engine-client PROPERTIES
+        WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
+    )
+elseif(UNIX AND NOT APPLE)
     set_target_properties(carbon-engine-client PROPERTIES
         INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"
         BUILD_WITH_INSTALL_RPATH TRUE
