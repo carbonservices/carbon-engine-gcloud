@@ -45,18 +45,18 @@ jobs:
       - name: Cache Qt installation on Windows
         uses: actions/cache@v5
         with:
-          path: C:\Qt\6.8.2\msvc2022_64
-          key: ${{ runner.os }}-qt-6.8.2-v1
+          path: C:\Qt\6.10.0\msvc2022_64
+          key: ${{ runner.os }}-qt-6.10.0-v1
 
-      - name: Install Qt 6.8.2 for MSVC
+      - name: Install Qt 6.10.0 for MSVC
         shell: pwsh
         run: |
-          if (-not (Test-Path "C:\Qt\6.8.2\msvc2022_64\bin\qmake.exe")) {
-            aqt install-qt windows desktop 6.8.2 win64_msvc2022_64 --outputdir "C:\Qt" -m qtwebengine qtpositioning qtwebchannel qthttpserver
+          if (-not (Test-Path "C:\Qt\6.10.0\msvc2022_64\bin\qmake.exe")) {
+            aqt install-qt windows desktop 6.10.0 win64_msvc2022_64 --outputdir "C:\Qt" -m qtwebengine qtpositioning qtwebchannel qthttpserver qtwebsockets
           }
-          echo "QTBIN=C:\Qt\6.8.2\msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "CMAKE_PREFIX_PATH=C:\Qt\6.8.2\msvc2022_64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "C:\Qt\6.8.2\msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "QTBIN=C:\Qt\6.10.0\msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "CMAKE_PREFIX_PATH=C:\Qt\6.10.0\msvc2022_64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "C:\Qt\6.10.0\msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Determine Dynamic Version
         id: ver
@@ -77,7 +77,7 @@ jobs:
         run: |
           cmake -B build -G "Ninja" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="C:/Qt/6.8.2/msvc2022_64" \
+            -DCMAKE_PREFIX_PATH="C:/Qt/6.10.0/msvc2022_64" \
             -DCARBON_ENGINE_VERSION="${{ steps.ver.outputs.VERSION }}" \
             -DCARBON_ENGINE_DOWNLOAD_MODELS=OFF
 
@@ -139,22 +139,22 @@ jobs:
       - name: Cache Qt installation on Linux
         uses: actions/cache@v5
         with:
-          path: /home/runner/work/Qt/6.8.2/gcc_64
-          key: ${{ runner.os }}-qt-6.8.2-v1
+          path: /home/runner/work/Qt/6.10.0/gcc_64
+          key: ${{ runner.os }}-qt-6.10.0-v1
 
       - name: Install aqtinstall
         run: pip install aqtinstall --break-system-packages
 
-      - name: Install Qt 6.8.2 on Linux
+      - name: Install Qt 6.10.0 on Linux
         run: |
-          if [ ! -f "/home/runner/work/Qt/6.8.2/gcc_64/bin/qmake" ]; then
-            aqt install-qt linux desktop 6.8.2 linux_gcc_64 --outputdir /home/runner/work/Qt -m qtwebengine qtpositioning qtwebchannel qthttpserver
+          if [ ! -f "/home/runner/work/Qt/6.10.0/gcc_64/bin/qmake" ]; then
+            aqt install-qt linux desktop 6.10.0 linux_gcc_64 --outputdir /home/runner/work/Qt -m qtwebengine qtpositioning qtwebchannel qthttpserver qtwebsockets
           fi
-          echo "QTBIN=/home/runner/work/Qt/6.8.2/gcc_64/bin" >> $GITHUB_ENV
-          echo "QT_PLUGIN_PATH=/home/runner/work/Qt/6.8.2/gcc_64/plugins" >> $GITHUB_ENV
-          echo "QML2_IMPORT_PATH=/home/runner/work/Qt/6.8.2/gcc_64/qml" >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=/home/runner/work/Qt/6.8.2/gcc_64" >> $GITHUB_ENV
-          echo "/home/runner/work/Qt/6.8.2/gcc_64/bin" >> $GITHUB_PATH
+          echo "QTBIN=/home/runner/work/Qt/6.10.0/gcc_64/bin" >> $GITHUB_ENV
+          echo "QT_PLUGIN_PATH=/home/runner/work/Qt/6.10.0/gcc_64/plugins" >> $GITHUB_ENV
+          echo "QML2_IMPORT_PATH=/home/runner/work/Qt/6.10.0/gcc_64/qml" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=/home/runner/work/Qt/6.10.0/gcc_64" >> $GITHUB_ENV
+          echo "/home/runner/work/Qt/6.10.0/gcc_64/bin" >> $GITHUB_PATH
 
       - name: Determine Dynamic Version
         id: ver
@@ -174,7 +174,7 @@ jobs:
         run: |
           cmake -B build -G "Ninja" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="/home/runner/work/Qt/6.8.2/gcc_64" \
+            -DCMAKE_PREFIX_PATH="/home/runner/work/Qt/6.10.0/gcc_64" \
             -DCARBON_ENGINE_VERSION="${{ steps.ver.outputs.VERSION }}" \
             -DCARBON_ENGINE_DOWNLOAD_MODELS=OFF
 

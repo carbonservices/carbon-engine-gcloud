@@ -31,6 +31,23 @@ if(WIN32)
         )
     endif()
 
+    # Install deployed Qt runtime DLLs and plugins into bin
+    install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/"
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        FILES_MATCHING
+        PATTERN "*.dll"
+        PATTERN "*.pak"
+        PATTERN "*.dat"
+        PATTERN "*.bin"
+        PATTERN "platforms/*"
+        PATTERN "imageformats/*"
+        PATTERN "networkinformation/*"
+        PATTERN "tls/*"
+        PATTERN "styles/*"
+        PATTERN "qml/*"
+        PATTERN "translations/*"
+    )
+
     install(FILES "${CMAKE_SOURCE_DIR}/src/libs/common/templates/template.html"
         DESTINATION templates
     )
@@ -115,7 +132,7 @@ else()
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://carbonservices.io")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgl1, libxkbcommon0")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgl1, libegl1, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libxcb-xinerama0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libtesseract5, libopenblas0, libpulse0, libnss3, libasound2")
 endif()
 
 include(CPack)

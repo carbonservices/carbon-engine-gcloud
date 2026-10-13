@@ -56,7 +56,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core WebEngineQuick WebChannel Positioning HttpServer Sql Concurrent Quick QuickControls2 Network Widgets)
+find_package(Qt6 6.10 REQUIRED COMPONENTS Core WebEngineQuick WebChannel Positioning HttpServer Sql Concurrent Quick QuickControls2 Network Widgets)
 qt_standard_project_setup()
 
 set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/third-party" CACHE PATH "" FORCE)
@@ -102,8 +102,8 @@ endif()
 FetchContent_MakeAvailable(llama)
 
 if(WIN32)
-    FetchContent_Declare(mkl_static URL https://www.nuget.org/api/v2/package/intelmkl.static.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_static.zip)
-    FetchContent_Declare(mkl_devel URL https://www.nuget.org/api/v2/package/intelmkl.devel.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_devel.zip)
+    FetchContent_Declare(mkl_static URL https://api.nuget.org/v3-flatcontainer/intelmkl.static.win-x64/2026.1.0.226/intelmkl.static.win-x64.2026.1.0.226.nupkg DOWNLOAD_NAME mkl_static.zip)
+    FetchContent_Declare(mkl_devel URL https://api.nuget.org/v3-flatcontainer/intelmkl.devel.win-x64/2026.1.0.226/intelmkl.devel.win-x64.2026.1.0.226.nupkg DOWNLOAD_NAME mkl_devel.zip)
     FetchContent_MakeAvailable(mkl_static mkl_devel)
 
     set(MKL_INCLUDE_DIR "${mkl_devel_SOURCE_DIR}/build/native/include" CACHE PATH "" FORCE)
