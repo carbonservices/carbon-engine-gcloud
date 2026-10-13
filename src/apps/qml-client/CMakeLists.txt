@@ -11,13 +11,14 @@ target_link_libraries(carbon-engine-client PRIVATE
     Qt6::Network
     Qt6::WebEngineQuick
     carbon-engine-logging
+    carbon-engine-common
 )
 
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 add_custom_command(TARGET carbon-engine-client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/template.html"
+        "${CMAKE_SOURCE_DIR}/src/libs/common/templates/template.html"
         $<TARGET_FILE_DIR:carbon-engine-client>/template.html
 )
 
@@ -29,6 +30,7 @@ add_custom_command(TARGET carbon-engine-client POST_BUILD
 
 set(QML_FILES
     qml/Main.qml
+    qml/Theme.qml
     qml/LeftSidebar.qml
     qml/CentralWorkspace.qml
     qml/RightPanel.qml
@@ -38,6 +40,8 @@ set(QML_FILES
     qml/ReportReviewScreen.qml
     qml/FieldGroupCard.qml
     qml/LoopFieldEditor.qml
+    qml/SettingsDialog.qml
+    qml/RateLimitDialog.qml
     qml/BrsrMetadata.js
 )
 foreach(qml_file IN LISTS QML_FILES)
@@ -45,6 +49,7 @@ foreach(qml_file IN LISTS QML_FILES)
     set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${filename})
 endforeach()
 
+set_source_files_properties(qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 set_source_files_properties(logo.png PROPERTIES QT_RESOURCE_ALIAS logo.png)
 
 qt_add_qml_module(carbon-engine-client
@@ -53,12 +58,14 @@ qt_add_qml_module(carbon-engine-client
     QML_FILES ${QML_FILES}
     RESOURCES logo.png
     SOURCES
+        ApiClientBase.h ApiClientBase.cpp
         UploadClient.h UploadClient.cpp
         PipelineStatusPoller.h PipelineStatusPoller.cpp
         ReportClient.h ReportClient.cpp
         SystemStatusPoller.h SystemStatusPoller.cpp
         ExtractionClient.h ExtractionClient.cpp
         ExtractionStatusPoller.h ExtractionStatusPoller.cpp
+        ModeClient.h ModeClient.cpp
 )
 
 if(WIN32)

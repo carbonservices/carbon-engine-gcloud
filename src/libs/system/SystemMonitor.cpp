@@ -1,6 +1,8 @@
 #include "SystemMonitor.h"
 
-// Windows APIs for CPU/memory/GPU
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <psapi.h>
@@ -48,8 +50,7 @@ SystemMonitor::SystemMonitor(QObject* parent)
 // ─────────────────────────────────────────────────────────────
 void SystemMonitor::detectGpu()
 {
-    // Enumerate DXGI adapters; flag true if at least one
-    // non-Microsoft Basic Render Driver is present.
+    // Enumerate DXGI adapters; select the discrete/primary GPU with the highest dedicated VRAM.
     IDXGIFactory* factory = nullptr;
     if (FAILED(CreateDXGIFactory(__uuidof(IDXGIFactory),
                                   reinterpret_cast<void**>(&factory)))) {
@@ -58,23 +59,37 @@ void SystemMonitor::detectGpu()
     }
 
     IDXGIAdapter* adapter = nullptr;
-    for (UINT i = 0; factory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+    quint64 maxVram = 0;
+    QString bestGpuDesc;
+    bool foundGpu = false;
+
+    for (UINT i = 0; SUCCEEDED(factory->EnumAdapters(i, &adapter)); ++i) {
+        if (!adapter) continue;
         DXGI_ADAPTER_DESC desc;
         if (SUCCEEDED(adapter->GetDesc(&desc))) {
             // VendorId 0x1414 is the Microsoft Basic Render Driver — skip it.
             if (desc.VendorId != 0x1414) {
-                _gpuPresent = true;
-                _vramTotalMb = static_cast<quint64>(desc.DedicatedVideoMemory / (1024 * 1024));
-                _log.info(QString("GPU detected: %1 (VRAM: %2 MB)")
-                              .arg(QString::fromWCharArray(desc.Description))
-                              .arg(_vramTotalMb));
-                adapter->Release();
-                break;
+                foundGpu = true;
+                quint64 vramMb = static_cast<quint64>(desc.DedicatedVideoMemory / (1024 * 1024));
+                if (vramMb >= maxVram) {
+                    maxVram = vramMb;
+                    bestGpuDesc = QString::fromWCharArray(desc.Description);
+                }
             }
         }
         adapter->Release();
+        adapter = nullptr;
     }
     factory->Release();
+
+    if (foundGpu) {
+        _gpuPresent = true;
+        _vramTotalMb = maxVram;
+        _log.info(QString("GPU detected: %1 (VRAM: %2 MB)").arg(bestGpuDesc).arg(_vramTotalMb));
+    } else {
+        _gpuPresent = false;
+        _vramTotalMb = 0;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -88,17 +103,18 @@ void SystemMonitor::sample()
         if (GetProcessTimes(GetCurrentProcess(), &c, &e, &k, &u)) {
             quint64 curK = fileTimeToUll(k);
             quint64 curU = fileTimeToUll(u);
-            quint64 dK   = curK - _prevProcKernel;
-            quint64 dU   = curU - _prevProcUser;
+            quint64 dK   = (curK >= _prevProcKernel) ? (curK - _prevProcKernel) : 0ULL;
+            quint64 dU   = (curU >= _prevProcUser)   ? (curU - _prevProcUser)   : 0ULL;
             _prevProcKernel = curK;
             _prevProcUser   = curU;
             // Each 100-ns tick == 1 unit; interval is kSampleIntervalMs ms.
             // Normalize across all logical cores so process CPU usage is 0-100%.
-            int numCores = std::max(1, QThread::idealThreadCount());
+            int numCores = (std::max)(1, QThread::idealThreadCount());
             quint64 intervalTicks = static_cast<quint64>(kSampleIntervalMs) * 10000ULL * static_cast<quint64>(numCores);
-            _cpuPctProcess = (intervalTicks > 0)
+            double rawPct = (intervalTicks > 0)
                 ? (static_cast<double>(dK + dU) / static_cast<double>(intervalTicks)) * 100.0
                 : 0.0;
+            _cpuPctProcess = (std::min)(100.0, (std::max)(0.0, rawPct));
         }
     }
 
@@ -109,18 +125,21 @@ void SystemMonitor::sample()
             quint64 curIdle   = fileTimeToUll(idle);
             quint64 curKernel = fileTimeToUll(kernel);
             quint64 curUser   = fileTimeToUll(user);
-            quint64 dIdle   = curIdle   - _prevSysIdle;
-            quint64 dKernel = curKernel - _prevSysKernel;
-            quint64 dUser   = curUser   - _prevSysUser;
+            quint64 dIdle   = (curIdle   >= _prevSysIdle)   ? (curIdle   - _prevSysIdle)   : 0ULL;
+            quint64 dKernel = (curKernel >= _prevSysKernel) ? (curKernel - _prevSysKernel) : 0ULL;
+            quint64 dUser   = (curUser   >= _prevSysUser)   ? (curUser   - _prevSysUser)   : 0ULL;
             _prevSysIdle   = curIdle;
             _prevSysKernel = curKernel;
             _prevSysUser   = curUser;
-            // Kernel includes idle; total = (kernel - idle) + user
-            quint64 total = (dKernel - dIdle) + dUser;
-            quint64 denom = (dKernel - dIdle) + dUser + dIdle;
-            _cpuPctSystem = (denom > 0)
+            // Kernel includes idle; total = (kernel - idle) + user.
+            // Guard against unsigned underflow if dKernel < dIdle.
+            quint64 kernelBusy = (dKernel >= dIdle) ? (dKernel - dIdle) : 0ULL;
+            quint64 total = kernelBusy + dUser;
+            quint64 denom = kernelBusy + dUser + dIdle;
+            double rawSys = (denom > 0)
                 ? (static_cast<double>(total) / static_cast<double>(denom)) * 100.0
                 : 0.0;
+            _cpuPctSystem = (std::min)(100.0, (std::max)(0.0, rawSys));
         }
     }
 
@@ -150,6 +169,9 @@ void SystemMonitor::sample()
 void SystemMonitor::setEnginePhase(EnginePhase phase)
 {
     _phase.store(phase);
+    if (phase == EnginePhase::Idle) {
+        _tokensPerSec.store(0.0);
+    }
 }
 
 EnginePhase SystemMonitor::enginePhase() const
@@ -220,4 +242,28 @@ QString SystemMonitor::phaseString(EnginePhase phase)
     case EnginePhase::DbWriting:    return QStringLiteral("DB Writing");
     }
     return QStringLiteral("Unknown");
+}
+
+QJsonObject SystemMonitor::getSystemSnapshot() const
+{
+    double  cpuProc  = cpuPctProcess();
+    double  cpuSys   = cpuPctSystem();
+    quint64 memProc  = memUsedMbProcess();
+    quint64 memSys   = memUsedMbSystem();
+    quint64 memTotal = memTotalMbSystem();
+    bool    gpuPres  = gpuPresent();
+    double  tps      = tokensPerSec();
+
+    QJsonObject obj;
+    obj["cpu_pct_process"]        = qRound(cpuProc * 10.0) / 10.0;
+    obj["cpu_pct_system"]         = qRound(cpuSys  * 10.0) / 10.0;
+    obj["memory_used_mb_process"] = static_cast<qint64>(memProc);
+    obj["memory_used_mb_system"]  = static_cast<qint64>(memSys);
+    obj["memory_total_mb_system"] = static_cast<qint64>(memTotal);
+    obj["gpu_present"]            = gpuPres;
+    obj["vram_total_mb"]          = static_cast<qint64>(vramTotalMb());
+    obj["gpu_pct"]                = gpuPres ? QJsonValue(0.0) : QJsonValue(QJsonValue::Null);
+    obj["engine_status"]          = phaseString(enginePhase());
+    obj["tokens_per_sec"]         = qRound(tps * 10.0) / 10.0;
+    return obj;
 }

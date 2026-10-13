@@ -556,7 +556,7 @@ function getTableColumns(key, rows) {
 }
 
 function cleanDisplayValue(val) {
-    if (val === null || val === undefined || val === "null" || val === "N/A" || val === "-") {
+    if (val === null || val === undefined || val === "null" || val === "N/A" || val === "-" || val === "<Not provided>") {
         return "";
     }
     if (typeof val === "object") {
@@ -575,3 +575,69 @@ function cleanDisplayValue(val) {
     return String(val);
 }
 
+function cleanFileUrl(rawUrl) {
+    if (!rawUrl) return "";
+    var decoded = decodeURIComponent(rawUrl.toString());
+    if (decoded.indexOf("file:///") === 0) {
+        var afterScheme = decoded.substring(8);
+        if (/^[a-zA-Z]:/.test(afterScheme)) {
+            return afterScheme;
+        }
+        return "/" + afterScheme;
+    }
+    if (decoded.indexOf("file://localhost/") === 0) {
+        var afterHost = decoded.substring(17);
+        if (/^[a-zA-Z]:/.test(afterHost)) {
+            return afterHost;
+        }
+        return "/" + afterHost;
+    }
+    if (decoded.indexOf("file://") === 0) {
+        return decoded.substring(7);
+    }
+    return decoded;
+}
+
+var JobStatus = {
+    Pending: "PENDING",
+    Processing: "PROCESSING",
+    Completed: "COMPLETED",
+    Failed: "FAILED",
+    Cancelled: "CANCELLED"
+};
+
+var ExtractionStatus = {
+    NotStarted: "NOT_STARTED",
+    Extracting: "EXTRACTING",
+    ReadyForReview: "READY_FOR_REVIEW",
+    Completed: "COMPLETED",
+    Accepted: "ACCEPTED",
+    Failed: "FAILED",
+    Cancelled: "CANCELLED"
+};
+
+var DocumentStatus = {
+    Queued: "QUEUED",
+    Processing: "PROCESSING",
+    Ingested: "INGESTED",
+    Failed: "FAILED"
+};
+
+function applyServerSchema(schemaObj) {
+    if (!schemaObj) return;
+    if (schemaObj.field_labels) {
+        for (var k in schemaObj.field_labels) {
+            fieldLabels[k] = schemaObj.field_labels[k];
+        }
+    }
+    if (schemaObj.table_titles) {
+        for (var t in schemaObj.table_titles) {
+            tableTitles[t] = schemaObj.table_titles[t];
+        }
+    }
+    if (schemaObj.table_schemas) {
+        for (var s in schemaObj.table_schemas) {
+            tableSchemas[s] = schemaObj.table_schemas[s];
+        }
+    }
+}

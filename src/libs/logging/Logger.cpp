@@ -19,20 +19,23 @@ namespace {
 // to a per-app directory under the system temp path (e.g. installed to a
 // read-only Program Files location).
 QString resolveLogDirectory() {
-    const QString appRelative = QFileInfo(QCoreApplication::applicationDirPath() + "/log").absoluteFilePath();
-    if (QDir().mkpath(appRelative)) {
-        QFileInfo probe(appRelative + "/.write-test");
-        QFile test(probe.filePath());
-        if (test.open(QIODevice::WriteOnly)) {
-            test.close();
-            test.remove();
-            return appRelative;
+    static const QString s_cachedDir = []() -> QString {
+        const QString appRelative = QFileInfo(QCoreApplication::applicationDirPath() + "/log").absoluteFilePath();
+        if (QDir().mkpath(appRelative)) {
+            QFileInfo probe(appRelative + "/.write-test");
+            QFile test(probe.filePath());
+            if (test.open(QIODevice::WriteOnly)) {
+                test.close();
+                test.remove();
+                return appRelative;
+            }
         }
-    }
 
-    const QString fallback = QDir::tempPath() + "/carbon-engine/log";
-    QDir().mkpath(fallback);
-    return fallback;
+        const QString fallback = QDir::tempPath() + "/carbon-engine/log";
+        QDir().mkpath(fallback);
+        return fallback;
+    }();
+    return s_cachedDir;
 }
 
 // One append-only file handle per module/date, shared by every Logger
@@ -81,17 +84,28 @@ std::map<QString, std::shared_ptr<FileLogSink>>& registry() {
 
 std::shared_ptr<FileLogSink> sinkFor(const QString& moduleName) {
     const QString dateStamp = QDate::currentDate().toString("yyyy-MM-dd");
-    const QString key = moduleName + "_" + dateStamp;
+    const QString prefix = moduleName + "_";
+    const QString key = prefix + dateStamp;
 
     QMutexLocker locker(&registryMutex());
-    auto it = registry().find(key);
-    if (it != registry().end()) {
+    auto& reg = registry();
+    auto it = reg.find(key);
+    if (it != reg.end()) {
         return it->second;
+    }
+
+    // Evict expired daily sinks for this module so old file handles close cleanly
+    for (auto iter = reg.begin(); iter != reg.end(); ) {
+        if (iter->first.startsWith(prefix)) {
+            iter = reg.erase(iter);
+        } else {
+            ++iter;
+        }
     }
 
     const QString filePath = resolveLogDirectory() + "/" + key + ".log";
     auto sink = std::make_shared<FileLogSink>(filePath);
-    registry().emplace(key, sink);
+    reg.emplace(key, sink);
     return sink;
 }
 

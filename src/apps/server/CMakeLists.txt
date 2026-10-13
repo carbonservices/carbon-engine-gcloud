@@ -1,6 +1,12 @@
 set(SERVER_SOURCES
     ServerConfig.h
     main.cpp
+    api/HTTPServer.h
+    api/HTTPServer.cpp
+    queue/JobQueue.h
+    queue/JobQueue.cpp
+    report/ReportExtractionService.h
+    report/ReportExtractionService.cpp
 )
 if(WIN32)
     list(APPEND SERVER_SOURCES app.rc)
@@ -8,10 +14,20 @@ endif()
 
 add_executable(carbon-engine ${SERVER_SOURCES})
 
-# Force console subsystem so Qt Logger outputs print to the command prompt
 set_target_properties(carbon-engine PROPERTIES WIN32_EXECUTABLE OFF)
 
-target_link_libraries(carbon-engine PRIVATE carbon-engine-server-libs Qt6::Core)
+target_include_directories(carbon-engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(carbon-engine PRIVATE
+    carbon-engine-common
+    carbon-engine-offline
+    carbon-engine-gcloud
+    carbon-engine-logging
+    carbon-engine-system
+    Qt6::Core
+    Qt6::HttpServer
+    Qt6::Network
+)
 
 add_custom_command(TARGET carbon-engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -21,7 +37,7 @@ add_custom_command(TARGET carbon-engine POST_BUILD
 
 add_custom_command(TARGET carbon-engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/src/apps/qml-client/template.html"
+        "${CMAKE_SOURCE_DIR}/src/libs/common/templates/template.html"
         $<TARGET_FILE_DIR:carbon-engine>/template.html
 )
 

@@ -23,67 +23,57 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Updated to include WebChannel and Positioning
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core WebEngineQuick WebChannel Positioning HttpServer Sql Concurrent Quick QuickControls2 Network)
 qt_standard_project_setup()
 
 set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/third-party" CACHE PATH "" FORCE)
 include(FetchContent)
 
-find_program(NASM_EXECUTABLE nasm
-    PATHS
-        "C:/Program Files/NASM"
-        "$ENV{LOCALAPPDATA}/Programs/NASM"
-)
-if(NOT NASM_EXECUTABLE)
-    execute_process(COMMAND winget install --id NASM.NASM --exact --silent --accept-package-agreements --accept-source-agreements)
-
-    # Clear the failed cache result so CMake is forced to search again
-    unset(NASM_EXECUTABLE CACHE)
-
-    # Expand potential installation paths for standard winget installs
-    set(ENV{PATH} "$ENV{PATH};C:\\Program Files\\NASM;$ENV{LOCALAPPDATA}\\Programs\\NASM;$ENV{LOCALAPPDATA}\\bin\\NASM;$ENV{LOCALAPPDATA}\\NASM")
-
-    find_program(NASM_EXECUTABLE nasm REQUIRED
+if(WIN32)
+    find_program(NASM_EXECUTABLE nasm
         PATHS
             "C:/Program Files/NASM"
             "$ENV{LOCALAPPDATA}/Programs/NASM"
-            "$ENV{LOCALAPPDATA}/bin/NASM"
-            "$ENV{LOCALAPPDATA}/NASM"
     )
+    if(NOT NASM_EXECUTABLE)
+        execute_process(COMMAND winget install --id NASM.NASM --exact --silent --accept-package-agreements --accept-source-agreements)
+        unset(NASM_EXECUTABLE CACHE)
+        set(ENV{PATH} "$ENV{PATH};C:\\Program Files\\NASM;$ENV{LOCALAPPDATA}\\Programs\\NASM;$ENV{LOCALAPPDATA}\\bin\\NASM;$ENV{LOCALAPPDATA}\\NASM")
+        find_program(NASM_EXECUTABLE nasm REQUIRED
+            PATHS
+                "C:/Program Files/NASM"
+                "$ENV{LOCALAPPDATA}/Programs/NASM"
+                "$ENV{LOCALAPPDATA}/bin/NASM"
+                "$ENV{LOCALAPPDATA}/NASM"
+        )
+    endif()
 endif()
 
-# inja
-set(INJA_USE_EMBEDDED_JSON ON CACHE BOOL "Use embedded JSON inside Inja" FORCE)
+set(INJA_USE_EMBEDDED_JSON ON CACHE BOOL "" FORCE)
 FetchContent_Declare(inja URL https://github.com/pantor/inja/archive/refs/tags/v3.4.0.tar.gz)
 FetchContent_MakeAvailable(inja)
 
-# llama.cpp
 FetchContent_Declare(llama GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git GIT_TAG master)
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
-# Optional GPU acceleration for llama.cpp (CUDA)
 find_package(CUDAToolkit QUIET)
 if(CUDAToolkit_FOUND)
     message(STATUS "CUDA Toolkit found (${CUDAToolkit_VERSION}). Enabling GGML_CUDA hardware acceleration.")
-    set(GGML_CUDA ON CACHE BOOL "Enable CUDA in ggml/llama.cpp" FORCE)
+    set(GGML_CUDA ON CACHE BOOL "" FORCE)
 else()
     message(STATUS "CUDA Toolkit not found. Building llama.cpp with CPU backend.")
-    set(GGML_CUDA OFF CACHE BOOL "Enable CUDA in ggml/llama.cpp" FORCE)
+    set(GGML_CUDA OFF CACHE BOOL "" FORCE)
 endif()
 
 FetchContent_MakeAvailable(llama)
 
-# Intel MKL & FAISS
 FetchContent_Declare(mkl_static URL https://www.nuget.org/api/v2/package/intelmkl.static.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_static.zip)
 FetchContent_Declare(mkl_devel URL https://www.nuget.org/api/v2/package/intelmkl.devel.win-x64/2026.1.0.226 DOWNLOAD_NAME mkl_devel.zip)
 FetchContent_MakeAvailable(mkl_static mkl_devel)
 
-# nuget MKL packages ship headers at <pkg>/build/native/include and win-x64 .lib files at
-# <pkg>/build/native/win-x64 - hardcoded since the package version above is pinned exactly.
-set(MKL_INCLUDE_DIR "${mkl_devel_SOURCE_DIR}/build/native/include")
-set(MKL_LIB_DIR "${mkl_static_SOURCE_DIR}/build/native/win-x64")
+set(MKL_INCLUDE_DIR "${mkl_devel_SOURCE_DIR}/build/native/include" CACHE PATH "" FORCE)
+set(MKL_LIB_DIR "${mkl_static_SOURCE_DIR}/build/native/win-x64" CACHE PATH "" FORCE)
 
 file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindMKL.cmake" "
 set(MKL_FOUND TRUE)
@@ -110,13 +100,11 @@ set(FAISS_ENABLE_C_API OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(faiss)
 
-# PDFium
 FetchContent_Declare(pdfium URL https://github.com/bblanchon/pdfium-binaries/releases/latest/download/pdfium-win-x64.tgz)
 FetchContent_MakeAvailable(pdfium)
 set(PDFIUM_INCLUDE_DIRS ${pdfium_SOURCE_DIR}/include)
 set(PDFIUM_LIBRARIES ${pdfium_SOURCE_DIR}/lib/pdfium.dll.lib)
 
-# Leptonica Dependencies
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
 set(PNG_INSTALL OFF CACHE BOOL "" FORCE)
 
@@ -147,7 +135,6 @@ set(PNG_LIBRARIES png_static CACHE STRING "" FORCE)
 
 export(TARGETS zlibstatic jpeg-static png_static FILE "${CMAKE_BINARY_DIR}/DepsTargets.cmake")
 
-# Leptonica & Tesseract
 FetchContent_Declare(Leptonica GIT_REPOSITORY https://github.com/DanBloomberg/leptonica.git GIT_TAG 1.83.1 OVERRIDE_FIND_PACKAGE)
 set(SW_BUILD OFF CACHE BOOL "" FORCE)
 set(WITH_ZLIB ON CACHE BOOL "" FORCE)
@@ -176,7 +163,6 @@ set(DISABLE_ARCHIVE ON CACHE BOOL "" FORCE)
 set(LEPT_TIFF_RESULT 0 CACHE INTERNAL "")
 FetchContent_MakeAvailable(tesseract)
 
-# Download the real LSTM model instead of using the dummy test data
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/eng.traineddata")
     message(STATUS "Downloading Tesseract English language model...")
     file(DOWNLOAD 
@@ -184,6 +170,45 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/eng.traineddata")
         "${CMAKE_SOURCE_DIR}/eng.traineddata"
         SHOW_PROGRESS
     )
+endif()
+
+option(CARBON_ENGINE_DOWNLOAD_MODELS "" ON)
+if(CARBON_ENGINE_DOWNLOAD_MODELS)
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/models")
+
+    set(BGE_MODEL_FILE "${CMAKE_SOURCE_DIR}/models/bge-small-en-v1.5-f16.gguf")
+    if(NOT EXISTS "${BGE_MODEL_FILE}")
+        message(STATUS "Downloading BGE embedding model...")
+        file(DOWNLOAD
+            "https://huggingface.co/compendiumlabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf"
+            "${BGE_MODEL_FILE}"
+            SHOW_PROGRESS
+            TLS_VERIFY ON
+            STATUS BGE_STATUS
+        )
+        list(GET BGE_STATUS 0 BGE_CODE)
+        if(NOT BGE_CODE EQUAL 0)
+            file(REMOVE "${BGE_MODEL_FILE}")
+            message(FATAL_ERROR "Failed to download BGE embedding model: ${BGE_STATUS}")
+        endif()
+    endif()
+
+    set(GEMMA_MODEL_FILE "${CMAKE_SOURCE_DIR}/models/gemma-2-2b-it-q4_k_m.gguf")
+    if(NOT EXISTS "${GEMMA_MODEL_FILE}")
+        message(STATUS "Downloading Gemma 2 2B generation model...")
+        file(DOWNLOAD
+            "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf"
+            "${GEMMA_MODEL_FILE}"
+            SHOW_PROGRESS
+            TLS_VERIFY ON
+            STATUS GEMMA_STATUS
+        )
+        list(GET GEMMA_STATUS 0 GEMMA_CODE)
+        if(NOT GEMMA_CODE EQUAL 0)
+            file(REMOVE "${GEMMA_MODEL_FILE}")
+            message(FATAL_ERROR "Failed to download Gemma generation model: ${GEMMA_STATUS}")
+        endif()
+    endif()
 endif()
 
 add_subdirectory(src)

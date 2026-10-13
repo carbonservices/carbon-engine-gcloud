@@ -24,7 +24,6 @@
   <em>Carbon Engine Desktop Workspace: Real-time local extraction tracking, statutory gap cataloging, and live GPU/CPU telemetry.</em>
 </p>
 
----
 
 ## Table of Contents
 
@@ -36,13 +35,12 @@
   - [Software Toolchain](#software-toolchain)
 - [Build & Installation](#build--installation)
   - [1. Clone Repository](#1-clone-repository)
-  - [2. Download Models](#2-download-models)
-  - [3. Build from Source](#3-build-from-source)
+  - [2. Build from Source](#2-build-from-source)
 - [Quick Start](#quick-start)
+- [Google Cloud & Gemini Setup](#google-cloud--gemini-setup)
 - [Contributing](#contributing)
 - [License](#license)
 
----
 
 ## Overview
 
@@ -50,19 +48,17 @@ Carbon Engine is an on-device, air-gapped C++ engine and Qt desktop client for s
 
 Most cloud AI services require uploading sensitive financial binders to third-party APIs. For public corporations handling Unpublished Price Sensitive Information (UPSI), Carbon Engine eliminates data leakage risks by keeping 100% of data and compute on the local machine.
 
----
 
 ## Key Features
 
 - **100% Air-Gapped**: Runs entirely on local hardware with zero outbound network calls or telemetry.
 - **Fast Document Ingestion**: Native PDF text extraction with OCR fallback for scanned pages.
-- **Hardware-Accelerated AI**: [llama.cpp](https://github.com/ggerganov/llama.cpp) (CUDA / AVX2) & [FAISS](https://github.com/facebookresearch/faiss) vector search for embeddings and extraction.
+- **Hardware-Accelerated AI**: [llama.cpp](https://github.com/ggerganov/llama.cpp) (GPU / CPU acceleration) & [FAISS](https://github.com/facebookresearch/faiss) vector search for embeddings and extraction.
 - **Targeted Statutory Extraction**: Extracts and maps metrics directly to official SEBI BRSR sections and principles.
 - **Fault-Tolerant Processing**: Built-in sanitization to handle model token cutoffs and formatting anomalies.
 - **Consultant Desktop UI**: Qt Quick desktop application with editor support and device telemetry.
 - **Audit-Ready Reports**: Exports standalone HTML and PDF reports with interactive charts.
 
----
 
 ## Architecture
 
@@ -79,7 +75,6 @@ Detailed technical diagrams are available in `docs/`:
 - **[Database Schema](docs/database_schema.drawio.svg)** - SQLite WAL relational tables, foreign key cascades, and embedding BLOB durability.
 - **[Statutory Extraction Pipeline](docs/extraction_pipeline.drawio.svg)** - Two-tier scoped retrieval, context budgeting.
 
----
 
 ## System Requirements
 
@@ -87,23 +82,21 @@ Detailed technical diagrams are available in `docs/`:
 
 | Component | Minimum | Recommended |
 |---|---|---|
-| **CPU** | x86_64 with AVX2 (4 cores) | 8+ cores (Intel Core i7/i9 or AMD Ryzen 7/9) |
-| **RAM** | 16 GB | 32 GB+ (for large 300+ page binders) |
-| **GPU** | *(Optional)* CPU inference supported | NVIDIA GPU with 8 GB+ VRAM (RTX 3060, 4060+, Compute 7.0+) |
-| **Disk** | 10 GB free space | SSD with 20 GB+ free space |
+| **Processor** | 64-bit multi-core CPU (4+ cores) | Modern 8-core CPU |
+| **Memory (RAM)** | 16 GB | 32 GB or more |
+| **Graphics (GPU)** | *(Optional)* CPU-only mode supported | Dedicated NVIDIA GPU (6 GB+ VRAM) |
+| **Storage** | 10 GB available space | SSD with 20 GB available space |
 
-### Software Toolchain
+### Software Prerequisites
 
-| Tool | Required Version | Purpose |
+| Component | Requirement | Purpose |
 |---|---|---|
-| **OS** | Windows 10/11 (64-bit) or Linux (Ubuntu 22.04+) | Host platform |
-| **Compiler** | MSVC 2022 (v143+) / GCC 11+ / Clang 14+ | C++20 compiler |
-| **CMake** | 3.24 or newer | Build system generator |
-| **Qt 6** | Qt 6.10 or newer | Core, Quick, QuickControls2, HttpServer, Sql, Concurrent |
-| **NASM** | 2.15+ *(Windows)* | SIMD image decoding assembler |
-| **CUDA Toolkit** | *(Optional)* CUDA 12.x | GPU acceleration (`GGML_CUDA=ON`) |
+| **Operating System** | Windows 10/11 (64-bit) or Linux (Ubuntu 22.04+) | Host platform |
+| **C++ Toolchain** | MSVC 2022 / GCC 11+ / Clang 14+ (C++20) | Compilation |
+| **CMake** | 3.24 or newer | Build configuration |
+| **Qt 6** | Qt 6.10 or newer | Application framework & UI |
+| **CUDA Toolkit** | *(Optional)* CUDA 12.x | GPU acceleration |
 
----
 
 ## Build & Installation
 
@@ -114,23 +107,9 @@ git clone https://github.com/carbonservices/carbon-engine.git
 cd carbon-engine
 ```
 
-### 2. Download Models
+### 2. Build from Source
 
-Place the recommended GGUF models in the `models/` folder:
-
-```powershell
-mkdir models
-
-# Embedding model (BGE-Small-EN-v1.5, ~133 MB)
-curl -L -o models/bge-small-en-v1.5-f16.gguf https://huggingface.co/compendiumlabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf
-
-# Extraction model (Qwen2.5-7B-Instruct-Q4_K_M, ~4.7 GB)
-curl -L -o models/qwen2.5-7b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf
-```
-
-### 3. Build from Source
-
-Third-party dependencies including [llama.cpp](https://github.com/ggerganov/llama.cpp) and [FAISS](https://github.com/facebookresearch/faiss) are automatically fetched and built via CMake `FetchContent`.
+Third-party dependencies and local GGUF models are automatically fetched and configured via CMake.
 
 #### Windows (Visual Studio 2022 & Qt 6)
 
@@ -145,7 +124,6 @@ Binaries are placed in `__Builds/x64/bin/`:
 - `carbon-engine.exe` - Background daemon
 - `carbon-engine-client.exe` - Desktop application
 
----
 
 ## Quick Start
 
@@ -166,7 +144,18 @@ The daemon initializes local models and listens on `http://localhost:8080`.
 3. **Review & Edit**: Inspect extracted fields, verify page citations, and edit tabular grids directly.
 4. **Lock & Export**: Finalize disclosures and export audit-ready HTML/PDF reports.
 
----
+
+## Google Cloud & Gemini Setup
+
+### 1. Get an API Key
+Generate a free API key at [Google AI Studio](https://aistudio.google.com/) via **Get API key**.
+
+### 2. Configure in Desktop Client
+1. In the desktop client, open **Settings**.
+2. Toggle **Google Cloud Processing** to **ON**.
+3. Enter your **Gemini API Key** (the client automatically loads available models from Google AI Studio).
+4. Click **Test Cloud Connection**, then click **Save**.
+
 
 ## Contributing
 
@@ -176,13 +165,11 @@ We welcome open-source contributions! Please review our [Contributing Guide](CON
 - **Standards**: Follow modern C++20 conventions, RAII practices, and format code with `.clang-format`.
 - **Policies**: Adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) and [Security Policy](SECURITY.md).
 
----
 
 ## License
 
 This project is licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE).
 
----
 
 <p align="center">
   Built with ❤️ for a transparent, sustainable, and data-driven future.

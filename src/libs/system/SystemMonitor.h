@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QMutex>
 #include <QString>
+#include <QJsonObject>
 
 // C++
 #include <atomic>
@@ -54,6 +55,9 @@ public:
 
     // Human-readable engine phase string for JSON.
     static QString phaseString(EnginePhase phase);
+
+    // Structured hardware and engine telemetry snapshot.
+    QJsonObject getSystemSnapshot() const;
 
 private slots:
     void sample();

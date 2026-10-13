@@ -7,10 +7,9 @@
 #include <QNetworkRequest>
 
 SystemStatusPoller::SystemStatusPoller(QObject *parent)
-    : QObject(parent)
+    : ApiClientBase(parent)
 {
     connect(&_timer, &QTimer::timeout, this, &SystemStatusPoller::poll);
-    startPolling();
 }
 
 void SystemStatusPoller::startPolling()
@@ -28,17 +27,45 @@ void SystemStatusPoller::stopPolling()
 
 void SystemStatusPoller::poll()
 {
-    QNetworkReply *reply = _network.get(QNetworkRequest(Endpoint));
+    QNetworkReply *reply = network().get(QNetworkRequest(endpoint(ApiRoutes::System)));
     connect(reply, &QNetworkReply::finished, this, [this, reply]()
     {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
+            if (_isConnected) {
+                _log.warn(QString("Lost connection to carbon-engine daemon: %1").arg(reply->errorString()));
+            }
+            _isConnected = false;
+            _engineStatus = "Disconnected";
+            _databaseStatus = "Offline";
+            _jobQueue = "—";
+            _cpuLoad = "—";
+            _memoryUsage = "—";
+            _gpuLoad = "—";
+            _gpuOffload = "—";
+            _vramUsage = "—";
+            _tokenRate = "—";
+            _activeModel = "Unavailable";
+            _cloudPacingStatus = "Offline";
+            emit statusUpdated();
             return;
         }
 
         auto doc = QJsonDocument::fromJson(reply->readAll());
         if (!doc.isObject()) {
+            if (_isConnected) {
+                _log.warn("Invalid JSON object received from /api/system");
+            }
+            _isConnected = false;
+            _engineStatus = "Invalid Response";
+            emit statusUpdated();
             return;
+        }
+
+        bool wasConnected = _isConnected;
+        _isConnected = true;
+        if (!wasConnected) {
+            _log.info("Established connection to carbon-engine daemon.");
         }
 
         QJsonObject obj = doc.object();
@@ -84,6 +111,13 @@ void SystemStatusPoller::poll()
         // 7. Token rate
         double tps = obj.value("tokens_per_sec").toDouble(0.0);
         _tokenRate = QString("%1 t/s").arg(QString::number(tps, 'f', 1));
+
+        // 8. Cloud Telemetry
+        _cloudEnabled = obj.value("cloud_enabled").toBool(false);
+        _activeEngineMode = obj.value("active_engine_mode").toString(EngineMode::Offline);
+        _activeModel = obj.value("active_model").toString(Models::LocalGemmaName);
+        _cloudPacingStatus = obj.value("cloud_pacing_status").toString("IDLE");
+        _apiKeyConfigured = obj.value("api_key_configured").toBool(false);
 
         emit statusUpdated();
     });

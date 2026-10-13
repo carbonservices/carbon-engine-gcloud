@@ -3,10 +3,11 @@
 #include "api/HTTPServer.h"
 #include "db/Database.h"
 #include "inference/LlamaEngine.h"
+#include "client/GeminiClient.h"
 #include "ingestion/DocumentProcessor.h"
 #include "logging/Logger.h"
 #include "queue/JobQueue.h"
-#include "report/BrsrSchema.h"
+#include "report/BRSRSchema.h"
 #include "report/ReportExtractionService.h"
 #include "report/ReportExporter.h"
 #include "system/SystemMonitor.h"
@@ -39,17 +40,26 @@ int main(int argc, char *argv[])
         llama.shutdown();
     });
 
+    GeminiClient gemini;
+
     VectorIndexRegistry indexRegistry(kEmbeddingDim, &db);
     DocumentProcessor docProcessor;
 
     JobQueue jobQueue(db, docProcessor, llama, indexRegistry);
     jobQueue.start(1500);
 
-    BrsrSchemaCatalog schemaCatalog;
-    ReportExtractionService extractionService(db, llama, indexRegistry, schemaCatalog, monitor);
+    BRSRSchemaCatalog schemaCatalog;
+    ReportExtractionService extractionService(db, llama, gemini, indexRegistry, schemaCatalog, monitor);
     ReportExporter exporter(db, schemaCatalog);
 
-    HttpServer server(db, llama, indexRegistry, monitor, schemaCatalog, extractionService, exporter, jobQueue);
+    QObject::connect(&jobQueue, &JobQueue::jobCompleted, [&extractionService, &log](int jobId) {
+        log.info(QString("Job %1 ingestion complete. Automatically advancing to statutory extraction on backend...").arg(jobId));
+        QThreadPool::globalInstance()->start([&extractionService, jobId]() {
+            extractionService.extractJob(jobId);
+        });
+    });
+
+    HttpServer server(db, llama, gemini, indexRegistry, monitor, schemaCatalog, extractionService, exporter, jobQueue);
     if (!server.listen(kDefaultPort))
     {
         log.critical(QString("Failed to bind HTTP server to port %1.").arg(kDefaultPort));
