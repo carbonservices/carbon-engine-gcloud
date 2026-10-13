@@ -101,7 +101,7 @@ set(CPACK_PACKAGE_VERSION "${CARBON_ENGINE_VERSION}")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "Carbon Services/Carbon ESG")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "Carbon ESG")
 set(CPACK_PACKAGE_CONTACT "support@carbonservices.io")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/README.md")
 
@@ -119,19 +119,19 @@ if(WIN32)
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_DEFINES "RequestExecutionLevel admin")
     set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
-        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --install-service'
-        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --start-service'
-        WriteRegStr HKLM \"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\" \"CarbonEngineTray\" '\"$INSTDIR\\\\bin\\\\carbon-tray.exe\"'
-        Exec '\"$INSTDIR\\\\bin\\\\carbon-tray.exe\"'
+      ExecWait '$INSTDIR\\\\bin\\\\carbon-engine.exe --install-service'
+      ExecWait '$INSTDIR\\\\bin\\\\carbon-engine.exe --start-service'
+      WriteRegStr HKLM 'Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run' 'CarbonEngineTray' '$INSTDIR\\\\bin\\\\carbon-tray.exe'
+      Exec '$INSTDIR\\\\bin\\\\carbon-tray.exe'
     ")
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
-        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --stop-service'
-        ExecWait '\"$INSTDIR\\\\bin\\\\carbon-engine.exe\" --uninstall-service'
-        DeleteRegValue HKLM \"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\" \"CarbonEngineTray\"
+      ExecWait '$INSTDIR\\\\bin\\\\carbon-engine.exe --stop-service'
+      ExecWait '$INSTDIR\\\\bin\\\\carbon-engine.exe --uninstall-service'
+      DeleteRegValue HKLM 'Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run' 'CarbonEngineTray'
     ")
-    set(CPACK_NSIS_MENU_LINKS
-        "bin/carbon-engine-client.exe" "Carbon ESG"
-        "bin/carbon-tray.exe" "Carbon Engine Service Manager"
+    set(CPACK_PACKAGE_EXECUTABLES
+        "carbon-engine-client" "Carbon ESG"
+        "carbon-tray" "Carbon Engine Service Manager"
     )
 else()
     set(CPACK_GENERATOR "DEB;TGZ")

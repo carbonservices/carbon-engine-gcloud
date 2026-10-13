@@ -93,7 +93,12 @@ jobs:
               echo "# Dummy install script" > "$d/cmake_install.cmake"
             fi
           done
-          cpack -C Release -G "NSIS;ZIP"
+          cpack -C Release -G "ZIP"
+          cpack -C Release -G "NSIS" || {
+            echo "=== NSISOutput.log ==="
+            cat _CPack_Packages/win64/NSIS/NSISOutput.log 2>/dev/null || true
+            exit 1
+          }
 
       - name: Upload Windows Installer Artifacts
         uses: actions/upload-artifact@v4
