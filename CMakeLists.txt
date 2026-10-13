@@ -85,6 +85,8 @@ if(WIN32)
     endif()
 endif()
 
+set(CMAKE_SKIP_INSTALL_RULES ON)
+
 set(INJA_USE_EMBEDDED_JSON ON CACHE BOOL "" FORCE)
 FetchContent_Declare(inja URL https://github.com/pantor/inja/archive/refs/tags/v3.4.0.tar.gz EXCLUDE_FROM_ALL)
 FetchContent_MakeAvailable(inja)
@@ -208,6 +210,24 @@ set(DISABLE_CURL ON CACHE BOOL "" FORCE)
 set(DISABLE_ARCHIVE ON CACHE BOOL "" FORCE)
 set(LEPT_TIFF_RESULT 0 CACHE INTERNAL "")
 FetchContent_MakeAvailable(tesseract)
+
+set(CMAKE_SKIP_INSTALL_RULES OFF)
+
+foreach(_dep_bin 
+    "${inja_BINARY_DIR}"
+    "${llama_BINARY_DIR}"
+    "${faiss_BINARY_DIR}"
+    "${zlib_BINARY_DIR}"
+    "${jpeg_BINARY_DIR}"
+    "${png_BINARY_DIR}"
+    "${leptonica_BINARY_DIR}"
+    "${tesseract_BINARY_DIR}"
+)
+    if(_dep_bin)
+        file(MAKE_DIRECTORY "${_dep_bin}")
+        file(WRITE "${_dep_bin}/cmake_install.cmake" "# Dummy install script for third-party dependency\n")
+    endif()
+endforeach()
 
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/eng.traineddata")
     message(STATUS "Downloading Tesseract English language model...")

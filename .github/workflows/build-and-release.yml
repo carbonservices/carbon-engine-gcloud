@@ -87,7 +87,13 @@ jobs:
       - name: Package with CPack (NSIS & ZIP)
         shell: bash
         working-directory: build
-        run: cpack -C Release -G "NSIS;ZIP"
+        run: |
+          for d in ../third-party/*-build; do
+            if [ -d "$d" ] && [ ! -f "$d/cmake_install.cmake" ]; then
+              echo "# Dummy install script" > "$d/cmake_install.cmake"
+            fi
+          done
+          cpack -C Release -G "NSIS;ZIP"
 
       - name: Upload Windows Installer Artifacts
         uses: actions/upload-artifact@v4
@@ -183,7 +189,13 @@ jobs:
 
       - name: Package with CPack (DEB & TGZ)
         working-directory: build
-        run: cpack -C Release -G "DEB;TGZ"
+        run: |
+          for d in ../third-party/*-build; do
+            if [ -d "$d" ] && [ ! -f "$d/cmake_install.cmake" ]; then
+              echo "# Dummy install script" > "$d/cmake_install.cmake"
+            fi
+          done
+          cpack -C Release -G "DEB;TGZ"
 
       - name: Upload Linux Package Artifacts
         uses: actions/upload-artifact@v4
