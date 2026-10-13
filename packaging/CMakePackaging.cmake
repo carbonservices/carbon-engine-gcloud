@@ -49,6 +49,9 @@ if(WIN32)
     )
 
     install(FILES "${CMAKE_SOURCE_DIR}/src/libs/common/templates/template.html"
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    install(FILES "${CMAKE_SOURCE_DIR}/src/libs/common/templates/template.html"
         DESTINATION templates
     )
     install(FILES "${CMAKE_SOURCE_DIR}/src/apps/qml-client/logo.png"
@@ -58,6 +61,9 @@ if(WIN32)
         DESTINATION .
     )
 else()
+    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN")
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
     # Linux dynamic dependencies & desktop integration
     if(EXISTS "${pdfium_SOURCE_DIR}/lib/libpdfium.so")
         install(FILES "${pdfium_SOURCE_DIR}/lib/libpdfium.so"
@@ -80,6 +86,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/eng.traineddata")
     install(FILES "${CMAKE_SOURCE_DIR}/eng.traineddata"
         DESTINATION share/tessdata
     )
+    if(WIN32)
+        install(FILES "${CMAKE_SOURCE_DIR}/eng.traineddata"
+            DESTINATION ${CMAKE_INSTALL_BINDIR}/tessdata
+        )
+    endif()
 endif()
 
 # 3. CPack Configuration
@@ -132,8 +143,11 @@ else()
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://carbonservices.io")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgl1, libegl1, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libxcb-xinerama0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libtesseract5, libopenblas0, libpulse0, libnss3, libasound2")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgl1, libegl1, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libxcb-xinerama0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libtesseract5, libopenblas0, libpulse0, libnss3, libasound2t64 | libasound2")
 endif()
+
+set(CPACK_ERROR_ON_ABSOLUTE_INSTALL_DESTINATION FALSE)
+set(CPACK_WARN_ON_ABSOLUTE_INSTALL_DESTINATION TRUE)
 
 include(CPack)
 
